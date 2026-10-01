@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>لوحة تحكم متجر شوّاقي | SHOW9 Admin</title>
+  <meta name="description" content="لوحة تحكم إدارة الطلبات والمنتجات لمتجر شوّاقي - موريتانيا">
+  <meta name="theme-color" content="#0F111A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="https://img.icons8.com/color/96/shopping-bag.png" type="image/png">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Supabase JS v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Top Header / App Bar -->
+  <header class="admin-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-logo">
+          <i class="fa-solid fa-bag-shopping"></i>
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-title">شَــوْقِــي <span>SHOW9</span></h1>
+          <p class="brand-subtitle">لوحة إدارة المتجر الذكية 🇲🇷</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="cloud-status" id="cloudStatusBadge" title="حالة الاتصال المباشر بقاعدة البيانات">
+          <span class="status-dot"></span>
+          <span id="cloudStatusText">جاري الاتصال...</span>
+        </div>
+
+        <button id="btnRefresh" class="icon-btn" title="تحديث البيانات فوراً">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+
+        <a href="https://supabase.com/dashboard/project/qdmnygoppgprfpqjuhwl/editor" target="_blank" class="db-link-btn" title="فتح سوبابيز">
+          <i class="fa-solid fa-database"></i>
+          <span>سوبابيز</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="admin-main">
+    
+    <!-- Top Stats Bar -->
+    <section class="stats-grid">
+      <div class="stat-card stat-primary">
+        <div class="stat-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">إجمالي الطلبات</span>
+          <span class="stat-value" id="statTotalOrders">0</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-warning">
+        <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">طلبات بانتظار المراجعة</span>
+          <span class="stat-value" id="statPendingOrders">0</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-success">
+        <div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">إجمالي المبيعات (أوقية)</span>
+          <span class="stat-value" id="statTotalSales">0 MRU</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-info">
+        <div class="stat-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">المنتجات المعروضة</span>
+          <span class="stat-value" id="statTotalProducts">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="orders" id="tabBtnOrders">
+        <i class="fa-solid fa-list-check"></i>
+        <span>إدارة الطلبات</span>
+        <span class="tab-badge" id="badgePendingCount">0</span>
+      </button>
+
+      <button class="tab-btn" data-tab="products" id="tabBtnProducts">
+        <i class="fa-solid fa-tags"></i>
+        <span>إدارة المنتجات</span>
+      </button>
+
+      <button class="tab-btn" data-tab="requests" id="tabBtnRequests">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>طلبات "وفّر لي منتج"</span>
+        <span class="tab-badge secondary" id="badgeRequestsCount">0</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: ORDERS SECTION -->
+    <section class="tab-content active" id="tab-orders">
+      <div class="section-toolbar">
+        <div class="filters-pills" id="orderFilterPills">
+          <button class="filter-pill active" data-filter="all">كافة الطلبات</button>
+          <button class="filter-pill" data-filter="pending">قيد المراجعة</button>
+          <button class="filter-pill" data-filter="preparing">جاري التجهيز</button>
+          <button class="filter-pill" data-filter="delivering">خرج للتوصيل</button>
+          <button class="filter-pill" data-filter="completed">تم التسليم</button>
+        </div>
+
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="orderSearchInput" placeholder="بحث بالاسم أو الهاتف أو المدينة...">
+        </div>
+      </div>
+
+      <div id="ordersList" class="orders-grid">
+        <div class="loading-state">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>جاري تحميل الطلبات من السحابة...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: PRODUCTS SECTION -->
+    <section class="tab-content" id="tab-products">
+      <div class="section-toolbar">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="productSearchInput" placeholder="بحث باسم المنتج أو الوصف...">
+        </div>
+
+        <button id="btnOpenAddProduct" class="btn-primary">
+          <i class="fa-solid fa-plus"></i>
+          <span>إضافة منتج جديد</span>
+        </button>
+      </div>
+
+      <div id="productsList" class="products-grid">
+        <div class="loading-state">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>جاري تحميل المنتجات...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: CUSTOM REQUESTS SECTION -->
+    <section class="tab-content" id="tab-requests">
+      <div class="section-toolbar">
+        <h2 class="section-title">طلبات الزبائن الخاصة (وفّر لي منتج)</h2>
+        <span class="subtext">السلع والأجهزة والأزياء التي طلب المتسوقون توفيرها لهم من الخارج أو السوق المحلي</span>
+      </div>
+
+      <div id="requestsList" class="requests-grid">
+        <div class="loading-state">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>جاري تحميل طلبات التوفير...</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: ADD / EDIT PRODUCT -->
+  <div class="modal-backdrop" id="productModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="productModalTitle">إضافة منتج جديد</h3>
+        <button class="close-btn" id="btnCloseProductModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="productForm" class="modal-body">
+        <input type="hidden" id="prodFormId">
+
+        <div class="form-group">
+          <label>اسم المنتج *</label>
+          <input type="text" id="prodFormName" placeholder="مثال: دراعة موريتانية ملكية بيزان" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>السعر (أوقية MRU) *</label>
+            <input type="number" id="prodFormPrice" placeholder="مثال: 3200" required>
+          </div>
+
+          <div class="form-group">
+            <label>التصنيف *</label>
+            <select id="prodFormCategory" required>
+              <option value="clothing-men">أزياء رجالية</option>
+              <option value="clothing-women">أزياء نسائية</option>
+              <option value="perfumes">عطور ودخون</option>
+              <option value="electronics">إلكترونيات وهواتف</option>
+              <option value="watches">ساعات وإكسسوارات</option>
+              <option value="shoes">أحذية وحقائب</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>رابط صورة المنتج (URL) *</label>
+          <input type="url" id="prodFormImage" placeholder="https://images.unsplash.com/..." required>
+          <small class="helper-text">يمكنك نسخ رابط أي صورة عالية الدقة أو استخدام روابط Unsplash</small>
+        </div>
+
+        <div class="form-group">
+          <label>وصف ومواصفات المنتج</label>
+          <textarea id="prodFormDesc" rows="3" placeholder="تفاصيل الخامة والمقاس والجودة..."></textarea>
+        </div>
+
+        <div class="form-group-checkbox">
+          <label class="switch-label">
+            <input type="checkbox" id="prodFormStock" checked>
+            <span>متوفر في المخزن حالياً</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btnCancelProductModal">إلغاء</button>
+          <button type="submit" class="btn-primary" id="btnSaveProduct">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>حفظ المنتج</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: RECEIPT VIEWER (FOR BANKILY / SEDAD PROOFS) -->
+  <div class="modal-backdrop" id="receiptModal">
+    <div class="modal-card receipt-modal-card">
+      <div class="modal-header">
+        <h3>فحص إشعار التحويل البنكي</h3>
+        <button class="close-btn" id="btnCloseReceiptModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body receipt-modal-body">
+        <div class="receipt-meta">
+          <span id="receiptOrderTitle">طلب #ORD-</span>
+          <span id="receiptCustomerInfo"></span>
+        </div>
+        <div class="receipt-image-wrap">
+          <img id="receiptModalImg" src="" alt="إشعار بنكيلي / سداد">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="btnDownloadReceipt" href="" target="_blank" download class="btn-secondary">
+          <i class="fa-solid fa-download"></i>
+          <span>فتح الصورة الأصلية كاملة</span>
+        </a>
+        <button class="btn-primary" id="btnConfirmReceiptModal">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Audio Ping for new orders -->
+  <audio id="orderPingAudio" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- Script -->
+  <script src="app.js"></script>
+</body>
+</html>
